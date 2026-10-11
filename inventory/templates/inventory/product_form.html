@@ -1,0 +1,75 @@
+
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ title }} | StockFlow{% endblock %}
+{% block topbar_title %}Inventory / {{ title }}{% endblock %}
+
+{% block content %}
+
+<div class="mb-4">
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-subtitle mb-0">Enter the details for your inventory item.</p>
+</div>
+
+<div class="panel" style="max-width:850px">
+    <div class="panel-pad" style="border-bottom:1px solid var(--border)">
+        <div class="section-title">Product Information</div>
+        <div class="section-description">
+            Fields marked by the form are required.
+        </div>
+    </div>
+
+    <div class="panel-pad">
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert mb-4">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-4">
+
+                {% for field in form %}
+                <div class="col-md-6">
+
+                    <label class="form-label" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+
+                    {{ field }}
+
+                    {% if field.help_text %}
+                        <div class="text-secondary mt-2" style="font-size:12px">
+                            {{ field.help_text }}
+                        </div>
+                    {% endif %}
+
+                    {% if field.errors %}
+                        <div class="text-danger mt-2" style="font-size:12px">
+                            {{ field.errors|striptags }}
+                        </div>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mt-5 pt-4"
+                 style="border-top:1px solid var(--border)">
+
+                <button type="submit" class="btn btn-primary">
+                    Save Product
+                </button>
+
+                <a href="{% url 'product_list' %}"
+                   class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+{% endblock %}

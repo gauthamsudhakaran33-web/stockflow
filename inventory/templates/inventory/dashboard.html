@@ -1,0 +1,439 @@
+
+{% extends 'inventory/base.html' %}
+
+{% block title %}Dashboard | StockFlow{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+    .chart-card {
+        background: #111c30;
+        border: 1px solid #243149;
+        border-radius: 16px;
+        padding: 22px;
+        height: 100%;
+        min-width: 0;
+    }
+
+    .chart-card h5 {
+        color: #e8eef8;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+
+    .chart-subtitle {
+        color: #91a0b8;
+        font-size: 12px;
+        margin-bottom: 22px;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 260px;
+    }
+
+    .dashboard-heading {
+        color: #e8eef8;
+        font-weight: 700;
+    }
+
+    .dashboard-muted {
+        color: #91a0b8;
+    }
+
+    .dashboard-panel {
+        background: #111c30;
+        border: 1px solid #243149;
+        border-radius: 16px;
+        padding: 22px;
+        height: 100%;
+    }
+
+    .dashboard-panel h5 {
+        color: #e8eef8;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .dashboard-panel .table {
+        --bs-table-bg: transparent;
+        --bs-table-color: #e8eef8;
+        --bs-table-border-color: #243149;
+        font-size: 13px;
+    }
+
+    .dashboard-panel .table th {
+        color: #91a0b8;
+        font-weight: 500;
+    }
+
+    .dashboard-panel .table td,
+    .dashboard-panel .table th {
+        padding: 13px 8px;
+        vertical-align: middle;
+    }
+
+    .chart-empty {
+        color: #91a0b8;
+        text-align: center;
+        padding: 30px 0;
+        font-size: 13px;
+    }
+
+    .dashboard-action {
+        color: #60a5fa;
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .dashboard-action:hover {
+        color: #93c5fd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between
+            align-items-center gap-3 mb-4">
+    <div>
+        <h3 class="dashboard-heading mb-1">Inventory Overview</h3>
+        <p class="dashboard-muted mb-0">
+            Monitor your products and stock performance.
+        </p>
+    </div>
+
+    <a href="{% url 'product_add' %}"
+       class="btn btn-primary">
+        + Add Product
+    </a>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+
+    <div class="col-6 col-xl-3">
+        <div class="chart-card">
+            <div class="dashboard-muted small mb-2">
+                Total Products
+            </div>
+            <h3 class="dashboard-heading mb-1">
+                {{ total_products }}
+            </h3>
+            <small class="dashboard-muted">Unique products</small>
+        </div>
+    </div>
+
+    <div class="col-6 col-xl-3">
+        <div class="chart-card">
+            <div class="dashboard-muted small mb-2">
+                Low Stock
+            </div>
+            <h3 class="dashboard-heading mb-1">
+                {{ low_stock_count }}
+            </h3>
+            <small class="dashboard-muted">Need replenishment</small>
+        </div>
+    </div>
+
+    <div class="col-6 col-xl-3">
+        <div class="chart-card">
+            <div class="dashboard-muted small mb-2">
+                Out of Stock
+            </div>
+            <h3 class="dashboard-heading mb-1">
+                {{ out_of_stock }}
+            </h3>
+            <small class="dashboard-muted">Products at zero</small>
+        </div>
+    </div>
+
+    <div class="col-6 col-xl-3">
+        <div class="chart-card">
+            <div class="dashboard-muted small mb-2">
+                Inventory Value
+            </div>
+            <h3 class="dashboard-heading mb-1">
+                ₹{{ inventory_value|floatformat:2 }}
+            </h3>
+            <small class="dashboard-muted">Current stock value</small>
+        </div>
+    </div>
+
+</div>
+
+<!-- Visualizations -->
+<div class="row g-3 mb-4">
+
+    <div class="col-12 col-xl-6">
+        <div class="chart-card">
+            <h5>Products by Category</h5>
+            <p class="chart-subtitle">
+                Distribution of products across categories
+            </p>
+
+            {% if category_data %}
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            {% else %}
+                <div class="chart-empty">
+                    Add products to see category analytics.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+        <div class="chart-card">
+            <h5>Stock Status</h5>
+            <p class="chart-subtitle">
+                Products grouped by their stock levels
+            </p>
+
+            <div class="chart-container">
+                <canvas id="stockChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="chart-card">
+            <h5>Top 5 Products by Quantity</h5>
+            <p class="chart-subtitle">
+                Products with the highest available quantities
+            </p>
+
+            {% if top_products %}
+                <div class="chart-container">
+                    <canvas id="quantityChart"></canvas>
+                </div>
+            {% else %}
+                <div class="chart-empty">
+                    Add products to see quantity comparisons.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Recent products and stock alerts -->
+<div class="row g-3">
+
+    <div class="col-12 col-xl-7">
+        <div class="dashboard-panel">
+            <div class="d-flex justify-content-between
+                        align-items-center mb-3">
+                <h5 class="mb-0">Recent Products</h5>
+                <a href="{% url 'product_list' %}"
+                   class="dashboard-action">View all →</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>SKU</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in recent_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.sku }}</td>
+                            <td>{{ product.quantity }}</td>
+                            <td>₹{{ product.price|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">
+                                No products yet.
+                                <a href="{% url 'product_add' %}">
+                                    Add your first product
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-5">
+        <div class="dashboard-panel">
+            <h5 class="mb-3">Stock Alerts</h5>
+
+            {% for product in low_stock_products %}
+            <div class="d-flex justify-content-between
+                        align-items-center gap-3 py-3"
+                 style="border-bottom:1px solid #243149;">
+                <div>
+                    <div class="dashboard-heading">
+                        {{ product.name }}
+                    </div>
+                    <small class="dashboard-muted">
+                        {{ product.category }}
+                    </small>
+                </div>
+
+                <span class="badge text-bg-warning">
+                    {{ product.quantity }} left
+                </span>
+            </div>
+            {% empty %}
+            <p class="dashboard-muted mb-0">
+                No low-stock products right now.
+            </p>
+            {% endfor %}
+
+            <a href="{% url 'product_list' %}"
+               class="dashboard-action d-inline-block mt-3">
+                Manage inventory →
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Securely pass Django data into JavaScript -->
+{{ category_data|json_script:"category-data" }}
+{{ stock_status_data|json_script:"stock-data" }}
+{{ top_products|json_script:"quantity-data" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const categoryData = JSON.parse(
+        document.getElementById('category-data').textContent
+    );
+
+    const stockData = JSON.parse(
+        document.getElementById('stock-data').textContent
+    );
+
+    const quantityData = JSON.parse(
+        document.getElementById('quantity-data').textContent
+    );
+
+    Chart.defaults.color = '#91a0b8';
+    Chart.defaults.borderColor = '#243149';
+    Chart.defaults.font.family = 'Inter, sans-serif';
+
+    const tooltipOptions = {
+        backgroundColor: '#0f172a',
+        titleColor: '#e8eef8',
+        bodyColor: '#e8eef8',
+        borderColor: '#243149',
+        borderWidth: 1,
+        padding: 12
+    };
+
+    // 1. Category doughnut chart
+    const categoryCanvas = document.getElementById('categoryChart');
+
+    if (categoryCanvas && categoryData.length) {
+        new Chart(categoryCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: categoryData.map(item => item.category),
+                datasets: [{
+                    data: categoryData.map(item => item.total),
+                    backgroundColor: [
+                        '#3b82f6', '#06b6d4', '#8b5cf6',
+                        '#10b981', '#f59e0b', '#ec4899',
+                        '#64748b', '#14b8a6'
+                    ],
+                    borderColor: '#111c30',
+                    borderWidth: 3,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 18, usePointStyle: true }
+                    },
+                    tooltip: tooltipOptions
+                }
+            }
+        });
+    }
+
+    // 2. Stock status doughnut chart
+    new Chart(document.getElementById('stockChart'), {
+        type: 'doughnut',
+        data: {
+            labels: stockData.map(item => item.label),
+            datasets: [{
+                data: stockData.map(item => item.total),
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                borderColor: '#111c30',
+                borderWidth: 3,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 18, usePointStyle: true }
+                },
+                tooltip: tooltipOptions
+            }
+        }
+    });
+
+    // 3. Horizontal bar chart for quantities
+    const quantityCanvas = document.getElementById('quantityChart');
+
+    if (quantityCanvas && quantityData.length) {
+        new Chart(quantityCanvas, {
+            type: 'bar',
+            data: {
+                labels: quantityData.map(item => item.name),
+                datasets: [{
+                    label: 'Available Quantity',
+                    data: quantityData.map(item => item.quantity),
+                    backgroundColor: '#3b82f6',
+                    hoverBackgroundColor: '#60a5fa',
+                    borderRadius: 6,
+                    maxBarThickness: 32
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        grid: { color: '#243149' }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: tooltipOptions
+                }
+            }
+        });
+    }
+</script>
+
+{% endblock %}
